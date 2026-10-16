@@ -1,0 +1,83 @@
+name: Build IN TIME PDF Tools APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'in-time-pdf-tools.zip'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract uploaded web project ZIP
+        run: |
+          test -f in-time-pdf-tools.zip || { echo 'Missing in-time-pdf-tools.zip at repository root.'; exit 1; }
+          mkdir -p extracted-project
+          unzip -q in-time-pdf-tools.zip -d extracted-project
+          # Copy the archive contents into the workspace root while preserving .github workflow files.
+          cp -a extracted-project/. .
+          test -f package.json || { echo 'package.json was not found at the ZIP root.'; find extracted-project -maxdepth 3 -name package.json -print; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install project dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install Capacitor
+        run: |
+          npm install --save @capacitor/core@^7 @capacitor/android@^7 --legacy-peer-deps
+          npm install --save-dev @capacitor/cli@^7 --legacy-peer-deps
+
+      - name: Create Capacitor configuration
+        run: |
+          cat > capacitor.config.ts <<'CONFIG'
+          import type { CapacitorConfig } from '@capacitor/cli';
+          const config: CapacitorConfig = {
+            appId: 'com.intimedevs.intimepdftools',
+            appName: 'IN TIME PDF Tools',
+            webDir: 'dist',
+            bundledWebRuntime: false
+          };
+          export default config;
+          CONFIG
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Generate Android project
+        run: npx cap add android
+
+      - name: Sync web assets
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: intime-pdf-tools-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+          
