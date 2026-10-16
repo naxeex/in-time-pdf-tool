@@ -20,13 +20,22 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract uploaded web project ZIP
+        shell: bash
         run: |
+          set -e
           test -f in-time-pdf-tools.zip || { echo 'Missing in-time-pdf-tools.zip at repository root.'; exit 1; }
           mkdir -p extracted-project
           unzip -q in-time-pdf-tools.zip -d extracted-project
-          # Copy the archive contents into the workspace root while preserving .github workflow files.
-          cp -a extracted-project/. .
-          test -f package.json || { echo 'package.json was not found at the ZIP root.'; find extracted-project -maxdepth 3 -name package.json -print; exit 1; }
+          # Support ZIPs containing either project files directly or one enclosing folder.
+          if [ -f extracted-project/package.json ]; then
+            cp -a extracted-project/. .
+          else
+            package_json="$(find extracted-project -mindepth 2 -maxdepth 4 -name package.json -print -quit)"
+            test -n "$package_json" || { echo 'package.json was not found in the uploaded ZIP.'; find extracted-project -maxdepth 4 -type f | head -80; exit 1; }
+            project_dir="$(dirname "$package_json")"
+            cp -a "$project_dir"/. .
+          fi
+          test -f package.json || { echo 'package.json was not copied to the workspace root.'; exit 1; }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -47,21 +56,26 @@ jobs:
           npm install --save @capacitor/core@^7 @capacitor/android@^7 --legacy-peer-deps
           npm install --save-dev @capacitor/cli@^7 --legacy-peer-deps
 
-      - name: Create Capacitor configuration
+      - name: Create JSON Capacitor configuration
         run: |
-          cat > capacitor.config.ts <<'CONFIG'
-          import type { CapacitorConfig } from '@capacitor/cli';
-          const config: CapacitorConfig = {
-            appId: 'com.intimedevs.intimepdftools',
-            appName: 'IN TIME PDF Tools',
-            webDir: 'dist',
-            bundledWebRuntime: false
-          };
-          export default config;
+          # JSON avoids the TypeScript config loader failure seen in the previous run.
+          rm -f capacitor.config.ts capacitor.config.js capacitor.config.mjs
+          cat > capacitor.config.json <<'CONFIG'
+          {
+            "appId": "com.intimedevs.intimepdftools",
+            "appName": "IN TIME PDF Tools",
+            "webDir": "dist",
+            "android": {
+              "allowMixedContent": false
+            }
+          }
           CONFIG
 
       - name: Build web app
         run: npm run build
+
+      - name: Verify web build output
+        run: test -f dist/index.html
 
       - name: Generate Android project
         run: npx cap add android
