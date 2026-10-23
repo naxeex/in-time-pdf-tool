@@ -94,4 +94,18 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Create artifact with code and logo
+        uses: actions/upload-artifact@v4
+        with:
+          name: intime-pdf-tools-source
+          path: |
+            *
+            !.git/
+            !node_modules/
+            !extracted-project/
+            !android/
+            !dist/
+            !*.zip
+          retention-days: 14
           
