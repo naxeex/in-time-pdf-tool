@@ -1,0 +1,6 @@
+{
+  "name": "IN TIME PDF Tools",
+  "description": "Every PDF Tool You Need. Merge, split, compress, convert, edit, and organize PDF documents directly in your browser with private, fast local processing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
