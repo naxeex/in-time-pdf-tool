@@ -30,9 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg p-1 -ml-1 transition-transform active:scale-95"
           aria-label="IN TIME PDF Tools Home"
         >
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
-            <Clock className="w-5 h-5" />
-          </div>
+          <img src="/logo.png" alt="IN TIME Logo" className="w-9 h-9 rounded-lg shadow-sm shadow-blue-500/20" />
           <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0">
             IN TIME <span className="text-blue-600 dark:text-blue-400 font-normal">PDF Tools</span>
           </span>
